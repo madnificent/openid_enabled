@@ -50,6 +50,7 @@ module OpenidEnabled
       current_url = url_for :action => :complete_login
       parameters = params.reject{|k,v|request.path_parameters[k]}
       oidresp = consumer.complete(parameters, current_url)
+      session_key = (self.class.to_s.underscore + "_id").to_sym
       case oidresp.status
       when OpenID::Consumer::FAILURE
         if oidresp.display_identifier
@@ -61,7 +62,7 @@ module OpenidEnabled
       when OpenID::Consumer::SUCCESS
         flash[:notice] = ("Verification of #{oidresp.display_identifier}"\
                           " succeeded.")
-        session[:user_id] = User.find_by_openid_url(oidresp.display_identifier).id
+        session[session_key] = find_by_openid_url(oidresp.display_identifier).id
       when OpenID::Consumer::SETUP_NEEDED
         flash[:notice] = "Immediate request failed - Setup Needed"
       when OpenID::Consumer::CANCEL
