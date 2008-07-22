@@ -1,0 +1,17 @@
+OpenidEnabled
+=============
+
+This plugin is based on an example in the ruby-openid gem.
+
+
+Example
+=======
+
+UsersController < ApplicationController
+  openid_enabled
+  
+  # normal actions here
+end
+
+
+Copyright (c) 2008 The MADnificent, released under the MIT license (unless otherwise specified by the terms of the ruby-openid gem)
