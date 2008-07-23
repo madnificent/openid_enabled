@@ -4,6 +4,7 @@ class OpenidSupportGenerator < Rails::Generator::NamedBase
     record do |m|
       m.migration_template 'add_openid_url_migration.rb', "db/migrate", :migration_file_name => "add_openid_url_to_#{singular_name}"
       m.controller_command @args[0], "openid_enabled"
+      m.resource_route table_name.to_sym, { :collection => { :start_login => :get , :complete_login => :get } }
     end
   end
 
@@ -21,6 +22,25 @@ class Rails::Generator::Commands::Create
       end
     end
   end
+  
+  def resource_route( resource, route )
+    logger.add_resource_route "map.resources #{resource.inspect}, #{route.inspect}"
+    unless options[:pretend]
+      base = "map.resources #{resource.inspect}"
+      base_regexp = Regexp.escape(base)
+      gsub_file 'config/routes.rb', /#{base_regexp}[^\n]*/mi do |match|
+        matching_routes = match.scan( /#{base_regexp}\s*,([^\n]+)/ )
+        extra = (matching_routes[0] && matching_routes[0][0] && eval("{#{matching_routes[0][0]}}")) || { }
+        route.each_pair do |route_key, commands|
+          extra[route_key] ||= { }
+          commands.each_pair do |key, val|
+            extra[route_key][key] = val
+          end
+        end
+        "#{base}, #{extra.inspect.to_s.scan(/^\{(.+)\}$/mi)[0][0].gsub('=>', ' => ')}"
+      end
+    end
+  end
 end
 
 class Rails::Generator::Commands::Destroy
@@ -33,4 +53,30 @@ class Rails::Generator::Commands::Destroy
     end
     
   end
+
+  def resource_route( resource, route )
+    logger.delete_resource_route "map.resources #{resource.inspect}, #{route.inspect}"
+
+    unless options[:pretend]
+      base = "map.resources #{resource.inspect}"
+      base_regexp = Regexp.escape(base)
+      gsub_file 'config/routes.rb', /#{base_regexp}[^\n]*/mi do |match|
+        matching_routes = match.scan( /#{base_regexp}\s*,([^\n]+)/ )
+        extra = (matching_routes[0] && matching_routes[0][0] && eval("{#{matching_routes[0][0]}}")) || { }
+        extra.delete_if do |main_key, main_val|
+          items_to_delete = route[main_key] || { }
+          main_val.delete_if do |inner_key, inner_val|
+            items_to_delete[inner_key]
+          end
+          main_val.empty?
+        end
+        if extra.empty?
+          base
+        else
+          "#{base}, #{extra.inspect.to_s.scan(/^\{(.+)\}$/mi)[0][0].gsub('=>', ' => ')}"
+        end
+      end
+    end
+  end
+  
 end
