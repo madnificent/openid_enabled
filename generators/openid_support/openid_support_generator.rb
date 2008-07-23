@@ -7,7 +7,7 @@ class OpenidSupportGenerator < Rails::Generator::NamedBase
   def manifest
     record do |m|
       m.migration_template 'add_openid_url_migration.rb', "db/migrate", :migration_file_name => "add_openid_url_to_#{singular_name}"
-      m.controller_command @args[0], "openid_enabled"
+      m.controller_command @args[0], "openid_enabled \"#{class_name}\""
       m.resource_route table_name.to_sym, { :collection => { :start_login => :get , :complete_login => :get } }
       m.template "_login_form.html.rb", "/app/views/#{controller_base_plural}/_login_form.html.erb", { :controller_base_plural => controller_base_plural }
     end

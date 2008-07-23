@@ -6,10 +6,20 @@ module OpenidEnabled
   end
   
   module ClassMethods
-    def openid_enabled
+    def openid_enabled( name )
       require 'pathname'
       require 'openid'
       require 'openid/store/filesystem'
+
+      normalized_name = name.to_s.underscore
+
+      self.send! "define_method", "openid_session_sym" do 
+        (normalized_name + "_openid_url").to_sym 
+      end
+
+      self.send! "define_method", "logged_in_" + normalized_name do
+        Kernel.const_get(normalized_name.camelize).send("find_by_openid_url", session[openid_session_sym])
+      end
 
       extend OpenidEnabled::SingletonMethods
       include OpenidEnabled::InstanceMethods
@@ -50,7 +60,6 @@ module OpenidEnabled
       current_url = url_for :action => :complete_login
       parameters = params.reject{|k,v|request.path_parameters[k]}
       oidresp = consumer.complete(parameters, current_url)
-      session_key = (self.class.to_s.underscore + "_openid_url").to_sym
       case oidresp.status
       when OpenID::Consumer::FAILURE
         if oidresp.display_identifier
@@ -62,7 +71,7 @@ module OpenidEnabled
       when OpenID::Consumer::SUCCESS
         flash[:notice] = ("Verification of #{oidresp.display_identifier}"\
                           " succeeded.")
-        session[session_key] = oidresp.display_identifier
+        session[openid_session_sym] = oidresp.display_identifier
       when OpenID::Consumer::SETUP_NEEDED
         flash[:notice] = "Immediate request failed - Setup Needed"
       when OpenID::Consumer::CANCEL
