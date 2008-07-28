@@ -24,6 +24,17 @@ module OpenidEnabled
       extend OpenidEnabled::SingletonMethods
       include OpenidEnabled::InstanceMethods
     end
+
+    def talks_openid( name )
+      normalized_name = name.to_s.underscore
+      openid_session_sym = (normalized_name + "_openid_url").to_sym
+      
+      self.send! "define_method", "logged_in_" + normalized_name do
+        Kernel.const_get(normalized_name.camelize).send("find_by_openid_url", session[openid_session_sym])
+      end
+    end
+
+
   end
   
   module SingletonMethods
