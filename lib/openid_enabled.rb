@@ -34,7 +34,7 @@ module OpenidEnabled
       end
     end
 
-
+    alias_method :has_openid, :openid_enabled
   end
   
   module SingletonMethods
