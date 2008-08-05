@@ -6,7 +6,7 @@ module OpenidEnabled
   end
   
   module ClassMethods
-    def openid_enabled( name )
+    def openid_enabled( name, hash = { } )
       require 'pathname'
       require 'openid'
       require 'openid/store/filesystem'
@@ -19,6 +19,13 @@ module OpenidEnabled
 
       self.send! "define_method", "logged_in_" + normalized_name do
         Kernel.const_get(normalized_name.camelize).send("find_by_openid_url", session[openid_session_sym])
+      end
+
+      self.send! "define_method", "login_redirect" do
+        hash[:login_redirects_to] || url_for( :action => :index )
+      end
+      self.send! "define_method", "failed_login_redirect" do
+        hash[:failed_login_redirects_to] || url_for( :action => :index )
       end
 
       extend OpenidEnabled::SingletonMethods
@@ -48,13 +55,13 @@ module OpenidEnabled
         identifier = params[:openid_url]
         if identifier.nil?
           flash[:error] = "OpenID URL not given"
-          redirect_to :action => 'index'
+          redirect_to failed_login_redirect
           return
         end
         oidreq = consumer.begin(identifier)
       rescue OpenID::OpenIDError => e
         flash[:error] = "Discovery failed for #{identifier}: #{e}"
-        redirect_to :action => 'index'
+        redirect_to failed_login_redirect
         return
       end
       return_to = url_for :action => :complete_login
@@ -89,7 +96,7 @@ module OpenidEnabled
         flash[:notice] = "OpenID transaction cancelled."
       else
       end
-      redirect_to url_for( :action => :index )
+      redirect_to login_redirect
     end
 
     def consumer
@@ -100,7 +107,5 @@ module OpenidEnabled
       end
       return @consumer
     end
-
   end
-
 end
