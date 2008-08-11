@@ -55,16 +55,16 @@ module OpenidEnabled
         identifier = params[:openid_url]
         if identifier.nil?
           flash[:error] = "OpenID URL not given"
-          redirect_to failed_login_redirect
+          redirect_to ( params[:failed_login_redirects_to] || failed_login_redirect )
           return
         end
         oidreq = consumer.begin(identifier)
       rescue OpenID::OpenIDError => e
         flash[:error] = "Discovery failed for #{identifier}: #{e}"
-        redirect_to failed_login_redirect
+        redirect_to ( params[:failed_login_redirects_to] || failed_login_redirect )
         return
       end
-      return_to = url_for :action => :complete_login
+      return_to = url_for :action => :complete_login, :login_redirect => ( params[:login_redirects_to] || login_redirect ), :failed_login_redirect => ( params[:failed_login_redirects_to] || failed_login_redirect )
       realm = url_for :action => :index
       
       if oidreq.send_redirect?(realm, return_to, params[:immediate])
@@ -86,17 +86,21 @@ module OpenidEnabled
         else
           flash[:error] = "Verification failed: #{oidresp.message}"
         end
+        redirect_to params[:failed_login_redirect]
       when OpenID::Consumer::SUCCESS
         flash[:notice] = ("Verification of #{oidresp.display_identifier}"\
                           " succeeded.")
         session[openid_session_sym] = oidresp.display_identifier
+        redirect_to params[:login_redirect]
       when OpenID::Consumer::SETUP_NEEDED
         flash[:notice] = "Immediate request failed - Setup Needed"
+        redirect_to params[:failed_login_redirect]
       when OpenID::Consumer::CANCEL
         flash[:notice] = "OpenID transaction cancelled."
+        redirect_to params[:failed_login_redirect]
       else
+        redirect_to params[:login_redirect]
       end
-      redirect_to login_redirect
     end
 
     def consumer
